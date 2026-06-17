@@ -29,15 +29,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-PDF_PATH = "RS2058CJ.pdf"
+PDF_PATH = "./datasheets/4CW150000E.pdf"
 PAGE_INDEX = 8   # page 9 in the PDF, zero-based
 DPI = 350
 
 # Axis values for the page 9 plot
-X0_VAL = 0.0     # UA = 0 kV
-X1_VAL = 12.0    # UA = 12 kV
-Y0_VAL = -300.0   # UG1 at bottom of plot
-Y1_VAL = 400.0    # UG1 at top of plot
+X0_VAL = 1     # UA = 0 kV
+X1_VAL = 20    # UA = 12 kV
+Y0_VAL = -600   # UG1 at bottom of plot
+Y1_VAL = 800    # UG1 at top of plot
 
 
 def render_pdf_page(pdf_path: str, page_index: int, dpi: int = 350) -> np.ndarray:
@@ -172,10 +172,10 @@ def crop_image(img: np.ndarray):
 
 def pick_calibration_points(img: np.ndarray):
     print("Click calibration points in this order:")
-    print("  1) x-axis point at UA = 0 kV")
-    print("  2) x-axis point at UA = 12 kV")
-    print("  3) y-axis point at UG1 = -300 V")
-    print("  4) y-axis point at UG1 = 400 V")
+    print(f"  1) x-axis point at UA = {X0_VAL} kV")
+    print(f"  2) x-axis point at UA = {X1_VAL} kV")
+    print(f"  3) y-axis point at UG1 = {Y0_VAL} V")
+    print(f"  4) y-axis point at UG1 = {Y1_VAL} V")
 
     picker = ImagePicker(img, "Calibration points")
     pts = picker.show()

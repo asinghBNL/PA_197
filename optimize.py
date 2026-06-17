@@ -2,7 +2,9 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
-Ug2 = 900 # [V]
+Ug2 = 1500 # [V]
+ua_lims  = [0,20e3]
+ug1_lims = [-600,800]
 
 ia_arr  = np.loadtxt("./ia_arr.csv", delimiter=",")
 ig2_arr = np.loadtxt("./ig2_arr.csv", delimiter=",")
@@ -10,28 +12,15 @@ ig2_arr = np.loadtxt("./ig2_arr.csv", delimiter=",")
 ua_domain = ia_arr[0]
 ia_arr  = ia_arr[1:]
 ig2_arr = ig2_arr[1:]
-print(ia_arr.shape,ig2_arr.shape)
 
-max_ig2_idx = [np.argmax(ig2_arr[0]),np.argmax(ig2_arr[1]),np.argmax(ig2_arr[2]),np.argmax(ig2_arr[3]),np.argmax(ig2_arr[4]),np.argmax(ig2_arr[5])]
+for i in ia_arr:
+    plt.plot(ua_domain,i,color='red')
 
-plt.plot(ua_domain,ia_arr[0],color='red')
-plt.plot(ua_domain,ia_arr[1],color='red')
-plt.plot(ua_domain,ia_arr[2],color='red')
-plt.plot(ua_domain,ia_arr[3],color='red')
-plt.plot(ua_domain,ia_arr[4],color='red')
-plt.plot(ua_domain,ia_arr[5],color='red')
-plt.plot(ua_domain,ia_arr[6],color='red')
-plt.plot(ua_domain,ia_arr[7],color='red')
+for i in ig2_arr:
+    plt.plot(ua_domain,i,color='blue')
 
-plt.plot(ua_domain[:max_ig2_idx[0]],ig2_arr[0][:max_ig2_idx[0]],color='blue')
-plt.plot(ua_domain[:max_ig2_idx[1]],ig2_arr[1][:max_ig2_idx[1]],color='blue')
-plt.plot(ua_domain[:max_ig2_idx[2]],ig2_arr[2][:max_ig2_idx[2]],color='blue')
-plt.plot(ua_domain[:max_ig2_idx[3]],ig2_arr[3][:max_ig2_idx[3]],color='blue')
-plt.plot(ua_domain[:max_ig2_idx[4]],ig2_arr[4][:max_ig2_idx[4]],color='blue')
-plt.plot(ua_domain[:max_ig2_idx[5]],ig2_arr[5][:max_ig2_idx[5]],color='blue')
-
-plt.xlim(0,12e3)
-plt.ylim(-300,400)
+plt.xlim(ua_lims[0],ua_lims[1])
+plt.ylim(ug1_lims[0],ug1_lims[1])
 plt.grid()
 plt.show()
 
@@ -44,19 +33,31 @@ def model_Ii(K,mu_c,mu_s,exp_coeff,ug1,ug2,ua):
     drive = np.maximum(drive, 0.0)
     return K * drive**exp_coeff
 
-def mse(l): return np.sum(l**2)/l.size
+def mse(l): return np.nansum(l**2)/l.size
 
-def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,ig2_domain_limits,bounds=None):
+def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,bounds=None):
     # params : 6 of them, 2 for A and 4 for Ii
     # data   : current values, Ia [0] and Ig2 [1]
     # domain : the Ua values
 
+    domain_ia  = domain[0]
+    domain_ig2 = domain[1]
+
+    ia_currents  = np.array(data[0])
+    ig2_currents = np.array(data[1])
+
     def objective(x):
-        l_Ia = 0
         l_Ig2 = 0
 
-        for idx, ia in enumerate(data[0]):
-            l_Ia  += mse(ia*np.ones(domain.size) - model_A(x[0],x[1],Ug2,domain)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges[idx],Ug2,domain))
+        # define a matrix of #curr x domain.size
+        IA_MATRIX = np.ones([ia_currents.size,domain_ia[0].size])*ia_currents.reshape(-1,1)
+        CALC_IA_MATRIX = model_A(x[0],x[1],Ug2,domain_ia)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges,Ug2,domain_ia)
+
+        l_Ia  = (IA_MATRIX - CALC_IA_MATRIX)
+        l_Ia = l_Ia.reshape(1,l_Ia.size)[0]
+        l_Ia = mse(l_Ia[np.isfinite(l_Ia)])
+        # for idx, ia in enumerate(data[0]):
+        #     l_Ia  += mse(ia*np.ones(domain.size) - model_A(x[0],x[1],Ug2,domain)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges[idx],Ug2,domain))
             # l_Ia  += mse(ia*np.ones(domain.size) - x[0]*model_Ii(x[1],x[2],x[3],x[4],ia_ug1_ranges[idx],Ug2,domain))
             # l_Ia  += mse(ia*np.ones(domain.size) - model_A(x[0],x[1],Ug2,domain)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges[idx],Ug2,domain))
 
@@ -69,36 +70,39 @@ def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,ig2_domain_l
         print(l_Ia, l_Ig2)
         return l_Ia #+ l_Ig2
 
-    # result = sp.optimize.minimize(objective,params,method="Nelder-Mead",options={'maxiter':1000,'maxfev':1000},bounds=bounds)
+    # result = sp.optimize.minimize(objective,params,method="Nelder-Mead",options={'maxiter':1000000,'maxfev':1000000},bounds=bounds)
     result = sp.optimize.minimize(objective,params,method="BFGS")
     # result = sp.optimize.least_squares(objective,params)
     return result.x
 
 # with alpha and beta, A is variable
-# params_0 = [0.9596,0.7408,2.99e-10,521.793,144.766,1.5]
-params_0 = [0.734193451132937,1.0792175315908628,5.533741388777446e-07,529.1759427926124,116.38930820677382,1.5478635624356243]
+params_0 = [0.9596,0.7408,2.99e-10,521.793,144.766,1.5]
 
-# without alpha and beta
-# params_0 = [0.5,2.99e-10,521.793,144.766,1.5]
-current_vals = [[0,5,10,20,30,40,60,80],[1,2,5,10,15,20]]
+# Current Values -----------------------------------------
+# 197
+# current_vals = [[0,5,10,20,30,40,60,80],[1,2,5,10,15,20]]
+# 28
+current_vals = [[0.001,1,5,15,30,50,80,100,120],[-0.2,-0.1,0,0.5,2,5,10,15]]
 
-opt_params = optimize_coeffs(params_0,current_vals,ua_domain,ia_arr,ig2_arr,max_ig2_idx)
+UA_IA  = np.tile(ua_domain, (len(current_vals[0]),1))
+UA_IG2 = np.tile(ua_domain, (len(current_vals[1]),1))
+opt_params = optimize_coeffs(params_0,current_vals,[UA_IA,UA_IG2],ia_arr,ig2_arr)
 
 for i in range(opt_params.size):
     print(params_0[i],opt_params[i])
 
 
-# for i in range(len(current_vals[0])):
-#     opt_ia = model_A(opt_params[0],opt_params[1],Ug2,ua_domain)*model_Ii(opt_params[2],opt_params[3],opt_params[4],opt_params[5],ia_arr[i],Ug2,ua_domain)
-#     # opt_ia = opt_params[0]*model_Ii(opt_params[1],opt_params[2],opt_params[3],opt_params[4],ia_arr[i],Ug2,ua_domain)
+for i in range(len(current_vals[0])):
+    opt_ia = model_A(opt_params[0],opt_params[1],Ug2,ua_domain)*model_Ii(opt_params[2],opt_params[3],opt_params[4],opt_params[5],ia_arr[i],Ug2,ua_domain)
+    # opt_ia = opt_params[0]*model_Ii(opt_params[1],opt_params[2],opt_params[3],opt_params[4],ia_arr[i],Ug2,ua_domain)
 
-#     plt.figure(i)
-#     plt.plot(current_vals[0][i]*np.ones(ua_domain.size),label=f"Ideal Ia : {current_vals[0][i]:.1f} A")
-#     plt.plot(opt_ia,label=f"Real Ia : {current_vals[0][i]:.1f} A")
-#     plt.legend()
-#     plt.grid()
+    plt.figure(i)
+    plt.plot(current_vals[0][i]*np.ones(ua_domain.size),label=f"Ideal Ia : {current_vals[0][i]:.1f} A")
+    plt.plot(opt_ia,label=f"Real Ia : {current_vals[0][i]:.1f} A")
+    plt.legend()
+    plt.grid()
 
-# plt.show()
+plt.show()
 
 def predict_ia(params, ug2, ua, ug1):
     alpha, beta, K, mu_c, mu_s, exp_coeff = params
@@ -110,8 +114,8 @@ def predict_ia(params, ug2, ua, ug1):
 ua_min = np.nanmin(ua_domain)
 ua_max = np.nanmax(ua_domain)
 
-ug1_min = -300.0
-ug1_max = 400.0
+ug1_min = ug1_lims[0]
+ug1_max = ug1_lims[1]
 
 ua_grid = np.linspace(ua_min, ua_max, 300)
 ug1_grid = np.linspace(ug1_min, ug1_max, 300)
@@ -123,7 +127,7 @@ IA_grid = predict_ia(opt_params, Ug2, UA, UG1)
 
 plt.figure(figsize=(9, 7))
 
-levels = [0, 5, 10, 20, 30, 40, 60, 80]
+levels = current_vals[0]
 
 cs = plt.contour(
     UA,
@@ -153,62 +157,15 @@ mask = np.isfinite(ug1_40A_curve)
 mask = np.isfinite(ug1_60A_curve)
 mask = np.isfinite(ug1_80A_curve)
 
-plt.plot(
-    ua_domain[mask],
-    ug1_0A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_5A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_10A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_20A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_30A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_40A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_60A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
-plt.plot(
-    ua_domain[mask],
-    ug1_80A_curve[mask],
-    "o",
-    markersize=3,
-    label="Extracted 5 A points",
-)
+for idx, i in enumerate(ia_arr):
+    mask = np.isfinite(i)
+    plt.plot(
+        ua_domain[mask],
+        i[mask],
+        "o",
+        markersize=3,
+        label=f"Extracted {current_vals[0][idx]} A points",
+    )
 
 plt.xlabel("UA")
 plt.ylabel("UG1")
