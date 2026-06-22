@@ -3,7 +3,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 
 Ug2 = 1500 # [V]
-ua_lims  = [0,20e3]
+ua_lims  = [1e3,20e3]
 ug1_lims = [-600,800]
 
 ia_arr  = np.loadtxt("./ia_arr.csv", delimiter=",")
@@ -55,7 +55,7 @@ def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,bounds=None)
 
         l_Ia  = (IA_MATRIX - CALC_IA_MATRIX)
         l_Ia = l_Ia.reshape(1,l_Ia.size)[0]
-        l_Ia = mse(l_Ia[np.isfinite(l_Ia)])
+        l_Ia = (l_Ia[np.isfinite(l_Ia)])
         # for idx, ia in enumerate(data[0]):
         #     l_Ia  += mse(ia*np.ones(domain.size) - model_A(x[0],x[1],Ug2,domain)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges[idx],Ug2,domain))
             # l_Ia  += mse(ia*np.ones(domain.size) - x[0]*model_Ii(x[1],x[2],x[3],x[4],ia_ug1_ranges[idx],Ug2,domain))
@@ -71,8 +71,8 @@ def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,bounds=None)
         return l_Ia #+ l_Ig2
 
     # result = sp.optimize.minimize(objective,params,method="Nelder-Mead",options={'maxiter':1000000,'maxfev':1000000},bounds=bounds)
-    result = sp.optimize.minimize(objective,params,method="BFGS")
-    # result = sp.optimize.least_squares(objective,params)
+    # result = sp.optimize.minimize(objective,params,method="BFGS")
+    result = sp.optimize.least_squares(objective,params)
     return result.x
 
 # with alpha and beta, A is variable
