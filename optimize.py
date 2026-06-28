@@ -24,8 +24,14 @@ plt.ylim(ug1_lims[0],ug1_lims[1])
 plt.grid()
 plt.show()
 
-def model_A(alpha,beta,ug2,ua):
-    return alpha*(1 - np.exp(-ua/(beta*ug2)))
+def model_A(alpha, beta, ug2, ua):
+    ua = np.asarray(ua, dtype=float)
+    base = alpha * (1.0 - np.exp(-ua / (beta * ug2)))
+    return np.where(
+        ua >= ug2,
+        base,
+        (ua / ug2) * base
+    )
 
 def model_Ii(K,mu_c,mu_s,exp_coeff,ug1,ug2,ua):
     drive = mu_c * ug1 + mu_s * ug2 + ua
@@ -49,30 +55,33 @@ def optimize_coeffs(params,data,domain,ia_ug1_ranges,ig2_ug1_ranges,bounds=None)
     ig2_currents = np.array(data[1])
 
     def objective(x):
-        l_Ig2 = 0
+        # define a matrix of #curr x domain.size
+        IA_MATRIX = np.ones((ia_currents.size,domain.size))*ia_currents.reshape(-1,1)
+        # IA_MATRIX = ia_currents.reshape(-1,1)
+        CALC_IA_MATRIX = model_A(x[0],x[1],Ug2,domain)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges,Ug2,domain)
+        # CALC_IA_MATRIX = ug2_vs_ua(x[0],x[1],x[2],x[3],x[4],x[5],Ug2,domain,IA_MATRIX)
+        l_Ia  = (IA_MATRIX - CALC_IA_MATRIX).flatten()
+        l_Ia = (l_Ia[np.isfinite(l_Ia)])
 
         # define a matrix of #curr x domain.size
-        IA_MATRIX = ia_currents.reshape(-1,1)
-        # CALC_IA_MATRIX = model_A(x[0],x[1],Ug2,domain_ia)*model_Ii(x[2],x[3],x[4],x[5],ia_ug1_ranges,Ug2,domain_ia)
-
-        CALC_IA_MATRIX = ug2_vs_ua(x[0],x[1],x[2],x[3],x[4],x[5],Ug2,domain,IA_MATRIX)
-        # print(ia_ug1_ranges.shape)
-        # print(CALC_IA_MATRIX.shape)
-
-        l_Ia  = ia_ug1_ranges - CALC_IA_MATRIX
-        l_Ia = l_Ia.reshape(1,l_Ia.size)[0]
-        l_Ia = mse(l_Ia[np.isfinite(l_Ia)])
+        IA_MATRIX = np.ones((ig2_currents.size,domain.size))*ig2_currents.reshape(-1,1)
+        # IA_MATRIX = ia_currents.reshape(-1,1)
+        CALC_IA_MATRIX = (1-model_A(x[0],x[1],Ug2,domain))*model_Ii(x[2],x[3],x[4],x[5],ig2_ug1_ranges,Ug2,domain)
+        # CALC_IA_MATRIX = ug2_vs_ua(x[0],x[1],x[2],x[3],x[4],x[5],Ug2,domain,IA_MATRIX)
+        l_Ig2  = (IA_MATRIX - CALC_IA_MATRIX).flatten()
+        l_Ig2 = (l_Ig2[np.isfinite(l_Ig2)])
 
         print(l_Ia, l_Ig2)
-        return l_Ia #+ l_Ig2
-
-    # result = sp.optimize.minimize(objective,params,method="Nelder-Mead",options={'maxiter':1e9,'maxfev':1e9},bounds=bounds)
-    result = sp.optimize.minimize(objective,params,method="BFGS")
-    # result = sp.optimize.least_squares(objective,params)
+        # return np.concatenate((l_Ia,l_Ig2))
+        l_Ia = np.concatenate((l_Ia,l_Ig2))
+        return mse(l_Ia)
+    result = sp.optimize.minimize(objective,params,method="Nelder-Mead",options={'maxiter':1e9,'maxfev':1e9},bounds=bounds)
+    # result = sp.optimize.minimize(objective,params,method="BFGS")
+    # result = sp.optimize.least_squares(objective,params,method="trf")
     return result.x
 
 # with alpha and beta, A is variable
-params_0 = [0.9596,0.7408,2.99e-10,521.793,144.766,1.5]
+params_0 = [0.9596,0.7408,2.99e-10,521.793,144.766,2.1044]
 
 # Current Values -----------------------------------------
 # 197
@@ -100,4 +109,6 @@ plt.title("Datasheet-style IA contours")
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
+plt.xlim(ua_lims[0],ua_lims[1])
+plt.ylim(ug1_lims[0],ug1_lims[1])
 plt.show()

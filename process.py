@@ -25,8 +25,8 @@ for file in sorted(directory_ig2.iterdir(), key=lambda x: x.name):
         ig2_ug1.append(temp_file['UG1_V'].to_numpy())
 
 # default voltage grid
-# Ua_domain  = np.arange(1e3,12e3,10)
-Ua_domain  = np.arange(1e3,20e3,10)
+# Ua_domain  = np.arange(0e3,12e3,10)
+Ua_domain  = np.arange(0e3,20e3,10)
 
 ia_ug1_interp = ia_ug1.copy()
 for i in range(len(ia_ug1)):
