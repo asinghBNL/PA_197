@@ -3,8 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from pathlib import Path
-directory_ia  = Path("./data/28/ia/")
-directory_ig2 = Path("./data/28/ig2/")
+directory_ia  = Path("./data/197/ia/")
+directory_ig2 = Path("./data/197/ig2/")
 
 ia_ua  = []
 ia_ug1 = []
@@ -25,8 +25,8 @@ for file in sorted(directory_ig2.iterdir(), key=lambda x: x.name):
         ig2_ug1.append(temp_file['UG1_V'].to_numpy())
 
 # default voltage grid
-# Ua_domain  = np.arange(0e3,12e3,10)
-Ua_domain  = np.arange(0e3,20e3,10)
+Ua_domain  = np.arange(0e3,12e3,10)
+# Ua_domain  = np.arange(0e3,20e3,10)
 
 ia_ug1_interp = ia_ug1.copy()
 for i in range(len(ia_ug1)):
