@@ -110,17 +110,17 @@ for i in current_vals[0]:
     # plt.plot(ua_domain,ug2_pred,color="blue")
     ug2_pred = ug2_vs_ua(*opt_params,Ug2,ua_domain,i)
     plt.plot(ua_domain,ug2_pred,color="green")
-    ug2_pred = ug2_vs_ua(*opt_params,Ug2,ua_domain,i,ig2_true=True)
-    plt.plot(ua_domain,ug2_pred,color="orange")
+    # ug2_pred = ug2_vs_ua(*opt_params,Ug2,ua_domain,i,ig2_true=True)
+    # plt.plot(ua_domain,ug2_pred,color="orange")
 
 for idx, i in enumerate(ia_arr):
     # plt.plot(ua_domain,i*np.ones_like(ua_domain),color="red",linewidth=3)
     plt.plot(ua_domain,i,'r--',linewidth=1.5,label=f"{current_vals[0][idx]} Amps")
     labelLines(plt.gca().get_lines(), align=True, zorder=1, fontsize=10)
-for idx, i in enumerate(ig2_arr):
-    # plt.plot(ua_domain,i*np.ones_like(ua_domain),color="red",linewidth=3)
-    plt.plot(ua_domain,i,'b--',linewidth=1.5,label=f"{current_vals[0][idx]} Amps")
-    labelLines(plt.gca().get_lines(), align=True, zorder=1, fontsize=10)
+# for idx, i in enumerate(ig2_arr):
+#     # plt.plot(ua_domain,i*np.ones_like(ua_domain),color="red",linewidth=3)
+#     plt.plot(ua_domain,i,'b--',linewidth=1.5,label=f"{current_vals[0][idx]} Amps")
+#     labelLines(plt.gca().get_lines(), align=True, zorder=1, fontsize=10)
 
 plt.xlabel("UA")
 plt.ylabel("UG1")
